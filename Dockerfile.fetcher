@@ -1,0 +1,26 @@
+FROM node:20-alpine
+
+RUN apk update && apk add --no-cache openssl
+
+WORKDIR /app
+
+# Copy shared files
+COPY utils ./utils/
+COPY db ./db/
+
+# Copy fetcher files
+COPY fetcher/package*.json ./fetcher/
+COPY fetcher/tsconfig.json ./fetcher/
+COPY fetcher/src ./fetcher/src/
+
+WORKDIR /app/fetcher
+
+# Install dependencies
+RUN npm install
+
+RUN npx prisma generate 
+
+# Build TypeScript
+RUN npm run build
+
+CMD ["node", "dist/fetcher/src/index.js"]

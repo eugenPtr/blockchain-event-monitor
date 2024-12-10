@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Chain {
+  chainId            Int                 @id @unique
+  name               String
+  lastProcessedBlock Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  events             SocketBridgeEvent[]
+
+  @@map("chain")
+}
+
+model SocketBridgeEvent {
+  id           Int      @id @default(autoincrement())
+  blockNumber  Int
+  txHash       String
+  chainId      Int
+  logIndex     Int
+  amount       Decimal  @db.Decimal(78, 0)
+  token        String
+  toChainId    Int
+  bridgeName   String
+  sender       String
+  receiver     String
+  metadata     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  chain        Chain    @relation(fields: [chainId], references: [chainId])
+
+  @@unique([txHash, chainId, logIndex])
+  @@map("socket_bridge_event")
+}

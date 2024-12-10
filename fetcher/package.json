@@ -1,0 +1,28 @@
+{
+  "name": "fetcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "node dist/fetcher/src/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "prisma": {
+    "schema": "../db/schema.prisma"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.0.1",
+    "amqplib": "^0.10.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.4"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.6",
+    "prisma": "^6.0.1",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+RUN apk update && apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY db ./db/
+COPY api ./api/
+
+WORKDIR /app/api
+
+RUN npm install
+
+RUN npx prisma generate
+
+RUN npm run build
+
+CMD ["npm", "run", "start"] 

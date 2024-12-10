@@ -1,0 +1,93 @@
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: indexer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d indexer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/indexer
+    command: sh -c "npx prisma db push && npx ts-node seed.ts"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  fetcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.fetcher
+    environment:
+      - RPC_URL=https://ethereum-rpc.publicnode.com
+      - CONTRACT_ADDRESS=0x3a23F943181408EAC424116Af7b7790c94Cb97a5
+      - CONTRACT_DEPLOYMENT_BLOCK=16848303
+      - CHAIN_ID=1
+      - BATCH_SIZE=20000
+      - POLLING_INTERVAL_MS=2000
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DATABASE_URL=postgresql://user:password@postgres:5432/indexer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DATABASE_URL=postgresql://user:password@postgres:5432/indexer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
+  # api:
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile.api
+  #   depends_on:
+  #     - postgres
+  #     - migrator  
+  #   environment:
+  #     PORT: 3003  
+  #     DATABASE_URL: postgresql://user:password@postgres:5432/indexer
+  #   ports:
+  #     - "3003:3003"
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
