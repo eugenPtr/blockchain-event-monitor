@@ -30,7 +30,23 @@ export interface SocketBridgeEvent {
   metadata: string;
 }
 
-async function main() {
+/**
+ * Main function that processes Socket bridge events from RabbitMQ and stores them in the database.
+ * 
+ * This function:
+ * 1. Connects to RabbitMQ and creates a channel
+ * 2. Sets up a consumer for the Socket bridge events queue
+ * 3. For each message received:
+ *    - Parses the event logs and decodes the event data
+ *    - Creates SocketBridgeEvent objects from the decoded data
+ *    - Stores the events in the database
+ *    - Updates the last processed block for the chain
+ *    - Acknowledges or rejects the message based on success/failure
+ * 
+ * The function handles errors by rejecting and requeuing failed messages.
+ * All database operations are performed in an atomic transaction.
+ */
+const main = async () => {
   // Connect to RabbitMQ
   const connection = await amqp.connect(process.env.RABBITMQ_URL!);
   const channel = await connection.createChannel();

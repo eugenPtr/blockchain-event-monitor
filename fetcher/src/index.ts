@@ -81,6 +81,22 @@ const callWithExponentialBackoff = async <T>(
 };
 
 
+/**
+ * Main function that continuously polls for new Socket bridge events and sends them to RabbitMQ.
+ * 
+ * This function:
+ * 1. Connects to RabbitMQ and creates a channel
+ * 2. Retrieves the chain configuration from the database
+ * 3. Enters an infinite loop that:
+ *    - Polls for new blocks at a configured interval
+ *    - Calculates the block range to fetch based on last fetched/processed blocks
+ *    - Fetches event logs from the blockchain for the block range
+ *    - Sends any found events to RabbitMQ for processing
+ *    - Updates the last fetched block number
+ * 
+ * The function uses exponential backoff for blockchain RPC calls to handle temporary failures.
+ * Events are fetched in batches defined by BATCH_SIZE to avoid RPC limits.
+ */
 const main = async () => {
   // Connect to RabbitMQ
   const connection = await amqp.connect(RABBITMQ_URL);
