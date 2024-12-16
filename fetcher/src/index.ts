@@ -32,16 +32,15 @@ const prisma = new PrismaClient({
 
 
 /**
- * Calculates the block interval for fetching events based on the last fetched, processed and mined blocks
+ * Calculates the block interval for fetching events based on the last fetched and mined blocks
  * @param lastFetchedBlock - The last block number that was fetched for events in the previous iteration
- * @param lastProcessedBlock - The last block number stored in the db
  * @param lastMinedBlock - The latest block number that has been mined on the blockchain
  * @returns An object containing fromBlock and toBlock that define the interval to fetch
  *          fromBlock: The starting block number (inclusive) for the next fetch
  *          toBlock: The ending block number (inclusive) for the next fetch, limited by BATCH_SIZE
  */
-const calculateBlockInterval = (lastFetchedBlock: number, lastProcessedBlock: number, lastMinedBlock: number) => {
-  const fromBlock: number = (lastFetchedBlock > 0 ? lastFetchedBlock : lastProcessedBlock) + 1;
+const calculateBlockInterval = (lastFetchedBlock: number, lastMinedBlock: number) => {
+  const fromBlock: number = lastFetchedBlock + 1;
   const toBlock: number = Math.min(fromBlock + BATCH_SIZE, lastMinedBlock);
   return {fromBlock, toBlock};
 }
@@ -112,16 +111,14 @@ const main = async () => {
     return;
   }
 
-  let lastProcessedBlock: number = Math.max(chain.lastProcessedBlock, CONTRACT_DEPLOYMENT_BLOCK);
-  let lastFetchedBlock: number = -1;
-
+  let lastFetchedBlock: number = Math.max(chain.lastProcessedBlock, CONTRACT_DEPLOYMENT_BLOCK);
 
   while (true) {
     // Sleep for 2 seconds
     await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL_MS));
 
     const lastMinedBlock: number = await callWithExponentialBackoff(() => provider.getBlockNumber());
-    const {fromBlock, toBlock} = calculateBlockInterval(lastFetchedBlock, lastProcessedBlock, lastMinedBlock);
+    const {fromBlock, toBlock} = calculateBlockInterval(lastFetchedBlock, lastMinedBlock);
 
     if (fromBlock >= lastMinedBlock) {
         console.log("No new blocks to fetch");
