@@ -30,21 +30,6 @@ const prisma = new PrismaClient({
   }
 });
 
-
-/**
- * Calculates the block interval for fetching events based on the last fetched and mined blocks
- * @param lastFetchedBlock - The last block number that was fetched for events in the previous iteration
- * @param lastMinedBlock - The latest block number that has been mined on the blockchain
- * @returns An object containing fromBlock and toBlock that define the interval to fetch
- *          fromBlock: The starting block number (inclusive) for the next fetch
- *          toBlock: The ending block number (inclusive) for the next fetch, limited by BATCH_SIZE
- */
-const calculateBlockInterval = (lastFetchedBlock: number, lastMinedBlock: number) => {
-  const fromBlock: number = lastFetchedBlock + 1;
-  const toBlock: number = Math.min(fromBlock + BATCH_SIZE, lastMinedBlock);
-  return {fromBlock, toBlock};
-}
-
 /**
  * Makes a HTTP request with exponential backoff retry logic
  * @param fn - The async function to execute that makes the HTTP request
@@ -118,7 +103,8 @@ const main = async () => {
     await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL_MS));
 
     const lastMinedBlock: number = await callWithExponentialBackoff(() => provider.getBlockNumber());
-    const {fromBlock, toBlock} = calculateBlockInterval(lastFetchedBlock, lastMinedBlock);
+    const fromBlock: number = lastFetchedBlock + 1;
+    const toBlock: number = Math.min(fromBlock + BATCH_SIZE, lastMinedBlock);
 
     if (fromBlock >= lastMinedBlock) {
         console.log("No new blocks to fetch");
